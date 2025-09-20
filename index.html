@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flashcard System with Firebase</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --border: #dee2e6;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            color: var(--dark);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+        
+        .btn:hover {
+            background-color: var(--secondary);
+            transform: translateY(-2px);
+        }
+        
+        .btn i {
+            font-size: 1.2rem;
+        }
+        
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-header {
+            background: var(--primary);
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-body {
+            padding: 20px;
+            position: relative;
+        }
+        
+        .card-footer {
+            padding: 15px 20px;
+            background: var(--light-gray);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-question {
+            font-size: 1.4rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            min-height: 60px;
+            padding-right: 40px;
+            position: relative;
+        }
+        
+        .card-answer {
+            background: var(--light);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            font-weight: 500;
+            color: var(--secondary);
+            border-left: 4px solid var(--success);
+        }
+        
+        .show-answer-btn {
+            background: var(--success);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        
+        .show-answer-btn:hover {
+            background: #3aa8d0;
+        }
+        
+        .counter {
+            display: flex;
+            gap: 15px;
+        }
+        
+        .counter-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.9rem;
+            color: var(--gray);
+        }
+        
+        .counter-value {
+            font-weight: 700;
+            font-size: 1.2rem;
+            color: var(--primary);
+        }
+        
+        .collection-form {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 30px;
+            margin: 30px auto;
+            max-width: 800px;
+            display: none;
+        }
+        
+        .form-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--light-gray);
+        }
+        
+        h2 {
+            color: var(--primary);
+            font-size: 1.8rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        input, textarea, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border 0.3s;
+        }
+        
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+            font-family: monospace;
+        }
+        
+        .form-hint {
+            font-size: 0.85rem;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        
+        .btn-secondary {
+            background: var(--gray);
+        }
+        
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            display: none;
+            animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+        }
+        
+        .notification.success {
+            background: #28a745;
+        }
+        
+        .notification.error {
+            background: #dc3545;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+        
+        .empty-state h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+        
+        .empty-state p {
+            color: var(--gray);
+            max-width: 600px;
+            margin: 0 auto 25px;
+            line-height: 1.6;
+        }
+        
+        .collection-selector {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .collection-selector select {
+            max-width: 300px;
+        }
+        
+        .speaker-btn {
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: transform 0.2s;
+            padding: 5px;
+        }
+        
+        .speaker-btn:hover {
+            transform: translateY(-50%) scale(1.1);
+            color: var(--secondary);
+        }
+
+        /* Estilos para o vocabulário */
+        #vocabButton {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            background-color: #6c5ce7;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(108, 92, 231, 0.3);
+            z-index: 999;
+            transition: all 0.3s ease;
+        }
+
+        #vocabButton:hover {
+            background-color: #5649c0;
+            transform: translateY(-2px);
+        }
+
+        #vocabButton i {
+            font-size: 1.2rem;
+        }
+
+        #vocabPopup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            background-color: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            z-index: 1001;
+        }
+
+        #vocabPopup h2 {
+            color: #6c5ce7;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #vocabList {
+            margin-top: 15px;
+        }
+
+        .vocabItem {
+            padding: 15px;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            transition: background-color 0.2s;
+        }
+
+        .vocabItem:hover {
+            background-color: #e9ecef;
+        }
+
+        .vocabItem-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .vocabItem .word {
+            font-weight: 600;
+            font-size: 1.1rem;
+        }
+
+        .vocabItem .meaning {
+            color: var(--gray);
+            margin-bottom: 10px;
+            padding: 8px;
+            background: white;
+            border-radius: 4px;
+            min-height: 20px;
+        }
+
+        .vocabItem .meaning-input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            display: none;
+        }
+
+        .vocabItem .actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .vocabItem .editBtn, 
+        .vocabItem .saveBtn,
+        .vocabItem .deleteBtn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 0.9rem;
+            padding: 5px 8px;
+            border-radius: 4px;
+            transition: background-color 0.2s;
+        }
+
+        .vocabItem .editBtn {
+            color: var(--primary);
+        }
+
+        .vocabItem .saveBtn {
+            color: #28a745;
+            display: none;
+        }
+
+        .vocabItem .deleteBtn {
+            color: #dc3545;
+        }
+
+        .vocabItem .editBtn:hover,
+        .vocabItem .saveBtn:hover,
+        .vocabItem .deleteBtn:hover {
+            background-color: rgba(0,0,0,0.05);
+        }
+
+        .closeVocabBtn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--gray);
+            cursor: pointer;
+        }
+
+        #overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        /* Estilo para palavras selecionadas */
+        .selected-word {
+            background-color: #fffacd;
+            transition: background-color 1s;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-layer-group"></i> Sistema de Flashcards</h1>
+            <button id="createCollectionBtn" class="btn">
+                <i class="fas fa-plus"></i> Criar Coleção
+            </button>
+        </header>
+        
+        <div class="collection-selector">
+            <label for="collectionSelect">Selecione uma coleção:</label>
+            <select id="collectionSelect" class="form-control">
+                <!-- Opções serão carregadas dinamicamente -->
+            </select>
+        </div>
+        
+        <div class="card-container" id="cardsContainer">
+            <div class="empty-state">
+                <i class="fas fa-spinner fa-spin"></i>
+                <h3>Carregando flashcards...</h3>
+            </div>
+        </div>
+        
+        <div class="collection-form" id="collectionForm">
+            <div class="form-header">
+                <h2><i class="fas fa-folder-plus"></i> Criar Nova Coleção</h2>
+                <button id="closeFormBtn" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Fechar
+                </button>
+            </div>
+            
+            <div class="form-group">
+                <label for="collectionName">Nome da Coleção</label>
+                <input type="text" id="collectionName" placeholder="Ex: Números em Inglês">
+            </div>
+            
+            <div class="form-group">
+                <label for="collectionDescription">Descrição</label>
+                <input type="text" id="collectionDescription" placeholder="Ex: Flashcards para aprender números em inglês">
+            </div>
+            
+            <div class="form-group">
+                <label for="flashcardsData">Flashcards (um por linha)</label>
+                <textarea id="flashcardsData" placeholder="Formato: Pergunta ; Resposta&#10;Ex: 1 ; one&#10;2 ; two"></textarea>
+                <p class="form-hint">Digite cada flashcard em uma nova linha, separando pergunta e resposta com ";"</p>
+            </div>
+            
+            <div class="form-actions">
+                <button id="cancelFormBtn" class="btn btn-secondary">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button id="saveCollectionBtn" class="btn">
+                    <i class="fas fa-save"></i> Salvar Coleção
+                </button>
+            </div>
+        </div>
+        
+        <div class="notification" id="notification"></div>
+    </div>
+
+    <!-- Botão e Popup do Vocabulário -->
+    <button id="vocabButton">
+        <i class="fas fa-book"></i> Vocabulário (<span id="vocabCount">0</span>)
+    </button>
+
+    <div id="overlay"></div>
+    
+    <div id="vocabPopup">
+        <button class="closeVocabBtn" onclick="closeVocabPopup()">&times;</button>
+        <h2><i class="fas fa-book-open"></i> Meu Vocabulário</h2>
+        <div id="vocabList">
+            <!-- Itens do vocabulário serão adicionados aqui -->
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCbqmIVeCzTF_mGMtR3qXE1GzAoMCT4Y2Q",
+            authDomain: "quizlet-a4fca.firebaseapp.com",
+            projectId: "quizlet-a4fca",
+            storageBucket: "quizlet-a4fca.appspot.com",
+            messagingSenderId: "866614057258",
+            appId: "1:866614057258:web:0ce78a8eca0c2cac2b6653",
+            measurementId: "G-E1CSNKGKEQ"
+        };
+
+        // Inicialize o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // DOM Elements
+        const createCollectionBtn = document.getElementById('createCollectionBtn');
+        const closeFormBtn = document.getElementById('closeFormBtn');
+        const cancelFormBtn = document.getElementById('cancelFormBtn');
+        const saveCollectionBtn = document.getElementById('saveCollectionBtn');
+        const collectionForm = document.getElementById('collectionForm');
+        const cardsContainer = document.getElementById('cardsContainer');
+        const notification = document.getElementById('notification');
+        const collectionSelect = document.getElementById('collectionSelect');
+        
+        // Elementos do vocabulário
+        const vocabButton = document.getElementById('vocabButton');
+        const vocabPopup = document.getElementById('vocabPopup');
+        const vocabList = document.getElementById('vocabList');
+        const overlay = document.getElementById('overlay');
+        const vocabCount = document.getElementById('vocabCount');
+        
+        // Variáveis de estado
+        let collections = [];
+        let currentFlashcards = [];
+        let vocabulary = JSON.parse(localStorage.getItem('englishVocabulary')) || [];
+        let selectionTimeout = null;
+        let currentSelection = '';
+        
+        // Funções
+        function showNotification(message, type) {
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+        
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                // Cancela qualquer fala em andamento
+                speechSynthesis.cancel();
+                
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.9; // Velocidade um pouco mais lenta
+                speechSynthesis.speak(utterance);
+            } else {
+                showNotification("Seu navegador não suporta a API de síntese de voz.", "error");
+            }
+        }
+        
+        function createFlashcardElement(card) {
+            return `
+                <div class="card" data-id="${card.id}">
+                    <div class="card-header">
+                        <span>Flashcard #${card.id}</span>
+                        <div class="counter">
+                            <div class="counter-item">
+                                <span>Respondidas</span>
+                                <span class="counter-value" id="answered-${card.id}">${card.answered || 0}</span>
+                            </div>
+                            <div class="counter-item">
+                                <span>Acertos</span>
+                                <span class="counter-value" id="correct-${card.id}">${card.correct || 0}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="card-question">
+                            ${card.answer}
+                            <button class="speaker-btn" onclick="speakText('${card.answer.replace(/'/g, "\\'")}')">
+                                <i class="fas fa-volume-up"></i>
+                            </button>
+                        </div>
+                        <div class="card-answer" id="answer-${card.id}">
+                            ${card.question}
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <button class="show-answer-btn" onclick="showAnswer(${card.id})">
+                            <i class="fas fa-eye"></i> Mostrar Resposta
+                        </button>
+                        <div>
+                            <button class="btn" onclick="markCorrect(${card.id})" style="background-color: #28a745; padding: 8px 15px;">
+                                <i class="fas fa-check"></i> Acertou
+                            </button>
+                            <button class="btn" onclick="markIncorrect(${card.id})" style="background-color: #dc3545; padding: 8px 15px;">
+                                <i class="fas fa-times"></i> Errou
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderFlashcards() {
+            if (currentFlashcards.length === 0) {
+                cardsContainer.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <h3>Nenhum flashcard encontrado</h3>
+                        <p>Não há flashcards nesta coleção ou você ainda não criou nenhuma coleção.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            cardsContainer.innerHTML = currentFlashcards.map(card => 
+                createFlashcardElement(card)
+            ).join('');
+        }
+        
+        function showAnswer(id) {
+            const answerElement = document.getElementById(`answer-${id}`);
+            answerElement.style.display = 'block';
+            
+            const card = currentFlashcards.find(c => c.id === id);
+            if (card) {
+                card.answered = (card.answered || 0) + 1;
+                document.getElementById(`answered-${id}`).textContent = card.answered;
+                updateCardStats(card);
+            }
+        }
+        
+        async function updateCardStats(card) {
+            try {
+                const collectionId = collectionSelect.value;
+                const collectionRef = db.collection("colecoes").doc(collectionId);
+                
+                await collectionRef.update({
+                    "cards": firebase.firestore.FieldValue.arrayRemove(card)
+                });
+                
+                await collectionRef.update({
+                    "cards": firebase.firestore.FieldValue.arrayUnion(card)
+                });
+            } catch (error) {
+                console.error("Erro ao atualizar estatísticas:", error);
+            }
+        }
+        
+        function markCorrect(id) {
+            const card = currentFlashcards.find(c => c.id === id);
+            if (card) {
+                card.correct = (card.correct || 0) + 1;
+                document.getElementById(`correct-${id}`).textContent = card.correct;
+                showNotification("Resposta marcada como correta!", "success");
+                updateCardStats(card);
+            }
+        }
+        
+        function markIncorrect(id) {
+            showNotification("Resposta marcada como incorreta. Continue praticando!", "error");
+        }
+        
+        function showCollectionForm() {
+            collectionForm.style.display = 'block';
+        }
+        
+        function hideCollectionForm() {
+            collectionForm.style.display = 'none';
+        }
+        
+        async function loadCollections() {
+            try {
+                const snapshot = await db.collection("colecoes").get();
+                collections = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                collectionSelect.innerHTML = '';
+                collections.forEach(collection => {
+                    const option = document.createElement('option');
+                    option.value = collection.id;
+                    option.textContent = collection.name;
+                    collectionSelect.appendChild(option);
+                });
+                
+                if (collections.length > 0) {
+                    await loadFlashcards(collections[0].id);
+                } else {
+                    cardsContainer.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <h3>Nenhuma coleção encontrada</h3>
+                            <p>Clique em "Criar Coleção" para começar.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error("Erro ao carregar coleções:", error);
+                showNotification("Erro ao carregar coleções", "error");
+            }
+        }
+        
+        async function loadFlashcards(collectionId) {
+            try {
+                const doc = await db.collection("colecoes").doc(collectionId).get();
+                if (doc.exists) {
+                    currentFlashcards = doc.data().cards || [];
+                    renderFlashcards();
+                } else {
+                    currentFlashcards = [];
+                    renderFlashcards();
+                }
+            } catch (error) {
+                console.error("Erro ao carregar flashcards:", error);
+                showNotification("Erro ao carregar flashcards", "error");
+            }
+        }
+        
+        async function saveCollectionToFirebase() {
+            const name = document.getElementById('collectionName').value.trim();
+            const description = document.getElementById('collectionDescription').value.trim();
+            const flashcardsData = document.getElementById('flashcardsData').value.trim();
+            
+            if (!name) {
+                showNotification("Por favor, insira um nome para a coleção.", "error");
+                return;
+            }
+            
+            if (!flashcardsData) {
+                showNotification("Por favor, insira pelo menos um flashcard.", "error");
+                return;
+            }
+            
+            // Parse flashcards
+            const flashcards = [];
+            const lines = flashcardsData.split('\n');
+            let id = 1;
+            
+            for (const line of lines) {
+                const parts = line.split(';');
+                if (parts.length >= 2) {
+                    flashcards.push({
+                        id: id++,
+                        question: parts[0].trim(),
+                        answer: parts[1].trim(),
+                        answered: 0,
+                        correct: 0
+                    });
+                }
+            }
+            
+            if (flashcards.length === 0) {
+                showNotification("Formato inválido. Use: Pergunta ; Resposta", "error");
+                return;
+            }
+            
+            try {
+                const collectionId = name.toLowerCase().replace(/\s+/g, '-');
+                await db.collection("colecoes").doc(collectionId).set({
+                    name: name,
+                    description: description,
+                    cards: flashcards,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                showNotification(`Coleção "${name}" salva com sucesso!`, "success");
+                await loadCollections();
+                collectionSelect.value = collectionId;
+                hideCollectionForm();
+            } catch (error) {
+                console.error("Erro ao salvar coleção:", error);
+                showNotification("Erro ao salvar coleção no Firebase", "error");
+            }
+        }
+        
+        // Funções do Vocabulário
+        function updateVocabUI() {
+            // Atualiza o contador
+            vocabCount.textContent = vocabulary.length;
+            
+            // Atualiza a lista de palavras
+            vocabList.innerHTML = '';
+            
+            if (vocabulary.length === 0) {
+                vocabList.innerHTML = '<p style="text-align: center; color: var(--gray);">Nenhuma palavra adicionada ainda.</p>';
+            } else {
+                vocabulary.forEach((item, index) => {
+                    const vocabItem = document.createElement('div');
+                    vocabItem.className = 'vocabItem';
+                    vocabItem.innerHTML = `
+                        <div class="vocabItem-header">
+                            <span class="word">${item.word}</span>
+                            <div class="actions">
+                                <button class="editBtn" onclick="editWord(${index})">
+                                    <i class="fas fa-edit"></i> Editar
+                                </button>
+                                <button class="saveBtn" onclick="saveWord(${index})" style="display: none;">
+                                    <i class="fas fa-save"></i> Salvar
+                                </button>
+                                <button class="deleteBtn" onclick="removeWord(${index})">
+                                    <i class="fas fa-trash-alt"></i> Excluir
+                                </button>
+                            </div>
+                        </div>
+                        <div class="meaning">${item.meaning || 'Clique em Editar para adicionar um significado'}</div>
+                        <textarea class="meaning-input" placeholder="Digite o significado aqui">${item.meaning || ''}</textarea>
+                    `;
+                    vocabList.appendChild(vocabItem);
+                });
+            }
+        }
+        
+        function addToVocabulary(word) {
+            const cleanWord = word.toLowerCase().trim();
+            
+            // Verifica se já existe no vocabulário
+            if (!vocabulary.some(item => item.word === cleanWord)) {
+                vocabulary.push({
+                    word: cleanWord,
+                    meaning: ''
+                });
+                saveVocabulary();
+                updateVocabUI();
+                showNotification(`"${cleanWord}" adicionada ao vocabulário!`, "success");
+                return true;
+            }
+            return false;
+        }
+        
+        function editWord(index) {
+            const vocabItems = document.querySelectorAll('.vocabItem');
+            if (vocabItems[index]) {
+                const item = vocabItems[index];
+                item.querySelector('.meaning').style.display = 'none';
+                item.querySelector('.meaning-input').style.display = 'block';
+                item.querySelector('.editBtn').style.display = 'none';
+                item.querySelector('.saveBtn').style.display = 'inline-block';
+                item.querySelector('.meaning-input').focus();
+            }
+        }
+        
+        function saveWord(index) {
+            const vocabItems = document.querySelectorAll('.vocabItem');
+            if (vocabItems[index]) {
+                const newMeaning = vocabItems[index].querySelector('.meaning-input').value.trim();
+                vocabulary[index].meaning = newMeaning;
+                
+                saveVocabulary();
+                updateVocabUI();
+                showNotification("Significado salvo com sucesso!", "success");
+            }
+        }
+        
+        function removeWord(index) {
+            if (confirm(`Tem certeza que deseja remover "${vocabulary[index].word}" do vocabulário?`)) {
+                vocabulary.splice(index, 1);
+                saveVocabulary();
+                updateVocabUI();
+                showNotification("Palavra removida do vocabulário", "success");
+            }
+        }
+        
+        function saveVocabulary() {
+            localStorage.setItem('englishVocabulary', JSON.stringify(vocabulary));
+        }
+        
+        function openVocabPopup() {
+            overlay.style.display = 'block';
+            vocabPopup.style.display = 'block';
+            updateVocabUI();
+        }
+        
+        function closeVocabPopup() {
+            overlay.style.display = 'none';
+            vocabPopup.style.display = 'none';
+        }
+        
+        function isEnglishWord(text) {
+            // Verifica se é uma palavra em inglês (apenas letras, sem números ou caracteres especiais)
+            return /^[a-zA-Z'-]+$/.test(text) && text.length > 1;
+        }
+        
+        function highlightSelection(selection) {
+            const range = selection.getRangeAt(0);
+            const span = document.createElement('span');
+            span.className = 'selected-word';
+            range.surroundContents(span);
+            
+            // Remove o destaque após 2 segundos
+            setTimeout(() => {
+                if (span.parentNode) {
+                    span.parentNode.normalize();
+                }
+            }, 2000);
+        }
+        
+        function handleSelection() {
+            const selection = window.getSelection();
+            const selectedText = selection.toString().trim();
+            
+            // Se não há seleção ou é a mesma seleção anterior, ignore
+            if (!selectedText || selectedText === currentSelection) {
+                return;
+            }
+            
+            // Se a seleção mudou, reinicie o temporizador
+            if (selectionTimeout) {
+                clearTimeout(selectionTimeout);
+            }
+            
+            currentSelection = selectedText;
+            
+            // Aguarde 500ms após a última mudança de seleção
+            selectionTimeout = setTimeout(() => {
+                if (isEnglishWord(selectedText)) {
+                    // Adiciona ao vocabulário se for uma palavra em inglês
+                    if (addToVocabulary(selectedText)) {
+                        highlightSelection(selection);
+                    }
+                }
+                currentSelection = '';
+            }, 500);
+        }
+        
+        // Event Listeners
+        createCollectionBtn.addEventListener('click', showCollectionForm);
+        closeFormBtn.addEventListener('click', hideCollectionForm);
+        cancelFormBtn.addEventListener('click', hideCollectionForm);
+        saveCollectionBtn.addEventListener('click', saveCollectionToFirebase);
+        collectionSelect.addEventListener('change', async (e) => {
+            await loadFlashcards(e.target.value);
+        });
+        
+        // Event Listeners do Vocabulário
+        vocabButton.addEventListener('click', openVocabPopup);
+        overlay.addEventListener('click', closeVocabPopup);
+        
+        // Monitora seleção de texto com debounce
+        document.addEventListener('mouseup', handleSelection);
+        document.addEventListener('touchend', handleSelection);
+        
+        // Inicialização
+        window.showAnswer = showAnswer;
+        window.markCorrect = markCorrect;
+        window.markIncorrect = markIncorrect;
+        window.speakText = speakText;
+        window.closeVocabPopup = closeVocabPopup;
+        window.removeWord = removeWord;
+        window.editWord = editWord;
+        window.saveWord = saveWord;
+        
+        // Carrega as coleções ao iniciar
+        loadCollections();
+        
+        // Atualiza a UI do vocabulário
+        updateVocabUI();
+    </script>
+</body>
+</html>
