@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exercícios de Tradução</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+            --light-gray: #e9ecef;
+            --border: #dee2e6;
+            --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            color: var(--dark);
+        }
+        
+        .main-content {
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            border-bottom: 2px solid var(--primary);
+        }
+        
+        h1 {
+            color: var(--primary);
+            font-size: 2.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow);
+        }
+        
+        .btn:hover {
+            background-color: var(--secondary);
+            transform: translateY(-2px);
+        }
+        
+        .btn i {
+            font-size: 1.2rem;
+        }
+        
+        .exercise-card {
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+            padding: 30px;
+            margin-bottom: 30px;
+            transition: transform 0.3s ease;
+        }
+        
+        .exercise-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .question {
+            font-size: 1.8rem;
+            font-weight: 600;
+            margin-bottom: 30px;
+            padding: 15px;
+            background: var(--light);
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            position: relative;
+        }
+        
+        .answer-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            transition: border 0.3s;
+        }
+        
+        .answer-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        
+        .correct-answer {
+            display: none;
+            padding: 15px;
+            background: var(--light);
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 1.2rem;
+            border-left: 4px solid var(--success);
+        }
+        
+        .correct {
+            color: var(--success);
+            font-weight: bold;
+        }
+        
+        .incorrect {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .btn-check {
+            background-color: var(--success);
+        }
+        
+        .btn-next {
+            background-color: var(--primary);
+        }
+        
+        .btn-check:hover {
+            background-color: #3aa8d0;
+        }
+        
+        .collection-selector {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+        
+        .collection-selector select {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .progress {
+            margin-top: 20px;
+            font-size: 1rem;
+            color: var(--gray);
+            text-align: center;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            box-shadow: var(--shadow);
+            z-index: 1000;
+            display: none;
+            animation: fadeIn 0.3s, fadeOut 0.3s 2.7s;
+        }
+        
+        .notification.success {
+            background: #28a745;
+        }
+        
+        .notification.error {
+            background: #dc3545;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+        }
+        
+        .empty-state h3 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: var(--dark);
+        }
+        
+        .empty-state p {
+            color: var(--gray);
+            max-width: 600px;
+            margin: 0 auto 25px;
+            line-height: 1.6;
+        }
+        
+        .speaker-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--primary);
+            cursor: pointer;
+            font-size: 1.2rem;
+            transition: transform 0.2s;
+        }
+        
+        .speaker-btn:hover {
+            transform: translateY(-50%) scale(1.1);
+            color: var(--secondary);
+        }
+        
+        /* Estilos para o controle de velocidade */
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 15px;
+            border-radius: 16px;
+            box-shadow: var(--shadow);
+        }
+        
+        .speed-control label {
+            font-weight: 600;
+            color: var(--dark);
+            white-space: nowrap;
+        }
+        
+        .speed-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: var(--light-gray);
+            outline: none;
+        }
+        
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            cursor: pointer;
+        }
+        
+        .speed-value {
+            font-weight: bold;
+            color: var(--primary);
+            min-width: 30px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <!-- Conteúdo principal -->
+    <div class="main-content">
+        <div class="container">
+            <header>
+                <h1><i class="fas fa-language"></i> Exercícios de Tradução</h1>
+                <a href="index.html" class="btn">
+                    <i class="fas fa-arrow-left"></i> Voltar aos Flashcards
+                </a>
+            </header>
+            
+            <div class="collection-selector">
+                <label for="collectionSelect">Selecione uma coleção:</label>
+                <select id="collectionSelect" class="form-control">
+                    <option value="">Carregando coleções...</option>
+                </select>
+            </div>
+            
+            <div class="speed-control">
+                <label for="speedSlider">Velocidade da fala:</label>
+                <input type="range" id="speedSlider" class="speed-slider" min="0.5" max="2" step="0.1" value="1">
+                <span id="speedValue" class="speed-value">1.0</span>
+            </div>
+            
+            <div id="exerciseContainer">
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <h3>Carregando exercícios...</h3>
+                </div>
+            </div>
+            
+            <div class="notification" id="notification"></div>
+        </div>
+    </div>
+
+    <script>
+        // Configuração do Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyCbqmIVeCzTF_mGMtR3qXE1GzAoMCT4Y2Q",
+            authDomain: "quizlet-a4fca.firebaseapp.com",
+            projectId: "quizlet-a4fca",
+            storageBucket: "quizlet-a4fca.appspot.com",
+            messagingSenderId: "866614057258",
+            appId: "1:866614057258:web:0ce78a8eca0c2cac2b6653",
+            measurementId: "G-E1CSNKGKEQ"
+        };
+
+        // Inicialize o Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        // Elementos DOM
+        const collectionSelect = document.getElementById('collectionSelect');
+        const exerciseContainer = document.getElementById('exerciseContainer');
+        const notification = document.getElementById('notification');
+        const speedSlider = document.getElementById('speedSlider');
+        const speedValue = document.getElementById('speedValue');
+        
+        // Variáveis de estado
+        let collections = [];
+        let currentFlashcards = [];
+        let currentIndex = 0;
+        let score = 0;
+        let speechRate = 1.0;
+        
+        // ========== VARIÁVEIS SRS - ADICIONE ESTAS ==========
+        let dueCards = [];
+        let currentCardIndex = 0;
+        let currentCollection = null;
+
+        // ========== SISTEMA SRS - ADICIONE AQUI ==========
+
+        // 1. Função calculateSM2 - ALGORITMO DE REPETIÇÃO ESPAÇADA
+        function calculateSM2(card, quality) {
+            // quality: 0 - Esqueci, 1 - Difícil, 2 - Bom, 3 - Fácil
+            let { interval = 1, ease = 2.5, reviews = 0, correctStreak = 0 } = card;
+            
+            if (quality >= 3) {
+                // Resposta correta
+                if (reviews === 0) {
+                    interval = 1;
+                } else if (reviews === 1) {
+                    interval = 6;
+                } else {
+                    interval = Math.round(interval * ease);
+                }
+                correctStreak++;
+                reviews++;
+            } else {
+                // Resposta incorreta - reset
+                correctStreak = 0;
+                interval = 1;
+                reviews++;
+            }
+            
+            // Ajustar fator de facilidade
+            ease = ease + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
+            ease = Math.max(1.3, ease); // Mínimo 1.3
+            
+            // Calcular próxima data de revisão
+            const nextReview = new Date();
+            nextReview.setDate(nextReview.getDate() + interval);
+            
+            return {
+                interval,
+                ease,
+                reviews,
+                correctStreak,
+                dueDate: nextReview.toISOString().split('T')[0],
+                lastReview: new Date().toISOString().split('T')[0]
+            };
+        }
+
+        // Funções utilitárias
+        function getParametro(nome) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(nome);
+        }
+
+        function showNotification(message, type) {
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 3000);
+        }
+        
+        function speakText(text) {
+            if ('speechSynthesis' in window) {
+                speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'en-US';
+                utterance.rate = speechRate;
+                speechSynthesis.speak(utterance);
+            }
+        }
+        
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('pt-BR');
+        }   
+
+        function loadExercise() {
+            if (dueCards.length === 0) {
+                exerciseContainer.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-check-circle"></i>
+                        <h3>Parabéns!</h3>
+                        <p>Você não tem mais cards para revisar hoje.</p>
+                        <button class="btn" onclick="loadDueCards()" style="margin-top: 20px;">
+                            <i class="fas fa-sync"></i> Verificar Novamente
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+            
+            const currentCard = dueCards[currentCardIndex];
+            const isNew = !currentCard.reviews || currentCard.reviews === 0;
+            
+            exerciseContainer.innerHTML = `
+                <div class="exercise-card">
+                    <div class="question">
+                        Traduza para o português: "${currentCard.question}"
+                        <button class="speaker-btn" id="speakerBtn">
+                            <i class="fas fa-volume-up"></i>
+                        </button>
+                        ${isNew ? '<span style="color: red; margin-left: 10px;">(Novo)</span>' : ''}
+                    </div>
+                    <input type="text" class="answer-input" id="userAnswer" placeholder="Digite a tradução em português...">
+                    <div class="correct-answer" id="correctAnswer"></div>
+                    
+                    <!-- Botões de qualidade SRS (mostrar depois de responder) -->
+                    <div class="actions" id="qualityButtons" style="display: none;">
+                        <button class="btn" onclick="rateCard(0)" style="background: #dc3545;">
+                            <i class="fas fa-times"></i> Esqueci
+                        </button>
+                        <button class="btn" onclick="rateCard(1)" style="background: #fd7e14;">
+                            <i class="fas fa-hard-hat"></i> Difícil
+                        </button>
+                        <button class="btn" onclick="rateCard(2)" style="background: #20c997;">
+                            <i class="fas fa-check"></i> Bom
+                        </button>
+                        <button class="btn" onclick="rateCard(3)" style="background: #198754;">
+                            <i class="fas fa-star"></i> Fácil
+                        </button>
+                    </div>
+                    
+                    <div class="actions" id="normalButtons">
+                        <button class="btn btn-check" id="checkBtn">
+                            <i class="fas fa-check"></i> Verificar
+                        </button>
+                    </div>
+                    
+                    <div class="progress">
+                        Questão ${currentCardIndex + 1} de ${dueCards.length} | 
+                        ${isNew ? 'Card novo' : `Próxima revisão: ${currentCard.dueDate ? formatDate(currentCard.dueDate) : 'Amanhã'}`}
+                    </div>
+                </div>
+            `;
+            
+            // Event listeners
+            document.getElementById('speakerBtn').addEventListener('click', function() {
+                speakText(currentCard.question);
+            });
+            
+            document.getElementById('checkBtn').addEventListener('click', checkAnswer);
+            document.getElementById('userAnswer').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    checkAnswer();
+                }
+            });
+        }
+
+        function checkAnswer() {
+            const userAnswer = document.getElementById('userAnswer').value.trim().toLowerCase();
+            const correctAnswer = dueCards[currentCardIndex].answer.toLowerCase();
+            
+            if (!userAnswer) {
+                showNotification("Por favor, digite sua resposta antes de corrigir.", "error");
+                return;
+            }
+            
+            // Mostrar resposta correta
+            document.getElementById('correctAnswer').innerHTML = `Resposta correta: <span class="correct">${correctAnswer}</span>`;
+            document.getElementById('correctAnswer').style.display = 'block';
+            
+            // Esconder botão normal, mostrar botões de qualidade SRS
+            document.getElementById('normalButtons').style.display = 'none';
+            document.getElementById('qualityButtons').style.display = 'block';
+            
+            // Não incrementar score automaticamente - o usuário vai classificar a dificuldade
+        }
+
+        async function updateCardInFirebase(card) {
+            if (!currentCollection) return;
+            
+            const snapshot = await db.collection("colecoes").doc(currentCollection).get();
+            const collectionData = snapshot.data();
+            const cards = collectionData.cards || [];
+            
+            // Encontrar e atualizar o card
+            const cardIndex = cards.findIndex(c => 
+                c.question === card.question && c.answer === card.answer
+            );
+            
+            if (cardIndex !== -1) {
+                cards[cardIndex] = card;
+                await db.collection("colecoes").doc(currentCollection).update({
+                    cards: cards
+                });
+            }
+        }
+        
+        async function rateCard(quality) {
+            const card = dueCards[currentCardIndex];
+            
+            try {
+                // Calcular novos valores SM-2
+                const newValues = calculateSM2(card, quality);
+                
+                // Atualizar card no array local
+                Object.assign(card, newValues);
+                
+                // Atualizar no Firebase
+                await updateCardInFirebase(card);
+                
+                // Próximo card
+                currentCardIndex++;
+                setTimeout(loadExercise, 1000);
+                
+            } catch (error) {
+                console.error("Erro ao avaliar card:", error);
+                showNotification("Erro ao salvar progresso", "error");
+            }
+        }
+
+        function nextQuestion() {
+            currentIndex++;
+            if (currentIndex >= currentFlashcards.length) {
+                currentIndex = 0;
+                showNotification("Você completou todas as questões! Reiniciando...", "success");
+            }
+            loadExercise();
+        }
+        
+        async function loadCollections() {
+            try {
+                const snapshot = await db.collection("colecoes").get();
+                collections = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                collectionSelect.innerHTML = '';
+                collections.forEach(collection => {
+                    const option = document.createElement('option');
+                    option.value = collection.id;
+                    option.textContent = collection.name;
+                    collectionSelect.appendChild(option);
+                });
+                
+                if (collections.length > 0) {
+                    collectionSelect.addEventListener('change', async (e) => {
+                        currentCollection = e.target.value;
+                        await loadDueCards();
+                    });
+                    
+                    // Verifica parâmetro na URL
+                    const colecaoParametro = getParametro("colecao");
+                    if (colecaoParametro) {
+                        collectionSelect.value = colecaoParametro;
+                        currentCollection = colecaoParametro;
+                        await loadDueCards();
+                    } else {
+                        // Se não tiver parâmetro, carrega a primeira coleção
+                        currentCollection = collections[0].id;
+                        await loadDueCards();
+                    }
+                } else {
+                    exerciseContainer.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-inbox"></i>
+                            <h3>Nenhuma coleção encontrada</h3>
+                            <p>Volte à página principal para criar uma coleção.</p>
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                console.error("Erro ao carregar coleções:", error);
+                showNotification("Erro ao carregar coleções", "error");
+            }
+        }
+        
+        function updateStatistics(allCards) {
+            const today = new Date().toISOString().split('T')[0];
+            const dueCards = allCards.filter(card => !card.dueDate || card.dueDate <= today);
+            const masteredCards = allCards.filter(card => card.interval > 21);
+            const totalReviews = allCards.reduce((sum, card) => sum + (card.reviews || 0), 0);
+            const correctReviews = allCards.reduce((sum, card) => sum + (card.correctStreak || 0), 0);
+            const accuracy = totalReviews > 0 ? Math.round((correctReviews / totalReviews) * 100) : 0;
+            
+            // Atualizar elementos HTML (se quiser mostrar estatísticas)
+            console.log(`Cards: ${allCards.length}, Para revisar: ${dueCards.length}, Acertos: ${accuracy}%`);
+        }
+        
+        async function loadDueCards() {
+            try {
+                if (!currentCollection) return;
+                
+                const today = new Date().toISOString().split('T')[0];
+                const snapshot = await db.collection("colecoes").doc(currentCollection).get();
+                
+                if (!snapshot.exists) {
+                    showNotification("Coleção não encontrada", "error");
+                    return;
+                }
+                
+                const collectionData = snapshot.data();
+                const allCards = collectionData.cards || [];
+                
+                // Filtrar cards para revisão (dueDate <= hoje ou não tem dueDate)
+                dueCards = allCards.filter(card => {
+                    return !card.dueDate || card.dueDate <= today;
+                });
+                
+                // Embaralhar cards
+                dueCards = shuffleArray(dueCards);
+                
+                updateStatistics(allCards);
+                loadExercise();
+                
+            } catch (error) {
+                console.error("Erro ao carregar cards para revisão:", error);
+                showNotification("Erro ao carregar revisões", "error");
+            }
+        }
+
+        function shuffleArray(array) {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        }
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', () => {
+            // Configura o controle deslizante de velocidade
+            speedSlider.addEventListener('input', function() {
+                speechRate = parseFloat(this.value);
+                speedValue.textContent = speechRate.toFixed(1);
+            });
+            
+            loadCollections();
+        });
+    </script>
+</body>
+</html>
