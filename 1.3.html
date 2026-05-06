@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Francês com a Marie - Sistema de Revisão e Comentários</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #141414;
+            color: #fff;
+        }
+
+        .header {
+            padding: 40px 40px 20px 40px;
+            background: linear-gradient(135deg, #1a1a2e, #141414);
+            border-bottom: 3px solid #e50914;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e50914, #ff6b6b);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .header p {
+            color: #ccc;
+            margin-top: 10px;
+        }
+
+        /* Seção de Revisões Pendentes */
+        .reviews-section {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            border-radius: 20px;
+            margin: 20px 40px 30px 40px;
+            padding: 25px;
+            border: 2px solid #e50914;
+            box-shadow: 0 0 20px rgba(229,9,20,0.3);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(229,9,20,0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(229,9,20,0); }
+            100% { box-shadow: 0 0 0 0 rgba(229,9,20,0); }
+        }
+
+        .reviews-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .reviews-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #e50914;
+        }
+
+        .reviews-badge {
+            background: #e50914;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+        }
+
+        .reviews-carousel {
+            display: flex;
+            gap: 16px;
+            overflow-x: auto;
+            padding: 10px 5px;
+            scrollbar-width: thin;
+        }
+
+        .reviews-carousel::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .review-card {
+            min-width: 240px;
+            background: #2a2a2a;
+            border-radius: 12px;
+            padding: 15px;
+            cursor: pointer;
+            transition: transform 0.2s;
+            border-left: 4px solid #e50914;
+        }
+
+        .review-card:hover {
+            transform: translateY(-5px);
+            background: #3a3a3a;
+        }
+
+        .review-number {
+            font-size: 0.8rem;
+            color: #e50914;
+            margin-bottom: 8px;
+        }
+
+        .review-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .review-due {
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        /* Carrosséis normais */
+        .carousel-section {
+            margin: 40px 0 50px 0;
+        }
+
+        .carousel-container {
+            position: relative;
+            padding: 20px 40px;
+        }
+
+        .carousel-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-left: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .carousel-title h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #ff6b6b;
+        }
+
+        .carousel-title .section-progress {
+            font-size: 0.9rem;
+            background: #2a2a2a;
+            padding: 5px 12px;
+            border-radius: 20px;
+            color: #e50914;
+        }
+
+        .carousel-wrapper {
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
+            white-space: nowrap;
+            cursor: grab;
+            scrollbar-width: thin;
+            border-radius: 12px;
+        }
+
+        .carousel-wrapper::-webkit-scrollbar {
+            height: 8px;
+        }
+
+        .carousel-wrapper::-webkit-scrollbar-track {
+            background: #2c2c2c;
+            border-radius: 10px;
+        }
+
+        .carousel-wrapper::-webkit-scrollbar-thumb {
+            background: #e50914;
+            border-radius: 10px;
+        }
+
+        .carousel {
+            display: inline-flex;
+            gap: 16px;
+            padding: 15px 5px;
+        }
+
+        .video-card {
+            position: relative;
+            width: 260px;
+            background: #1f1f1f;
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
+            display: inline-block;
+            white-space: normal;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        }
+
+        .video-card:hover {
+            transform: scale(1.03);
+            box-shadow: 0 8px 24px rgba(229,9,20,0.3);
+        }
+
+        .thumbnail {
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            color: #e50914;
+            position: relative;
+        }
+
+        .review-counter {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #e50914;
+            border-radius: 20px;
+            padding: 3px 8px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+
+        .video-title {
+            padding: 12px 12px 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            white-space: normal;
+            word-break: break-word;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 10px;
+            margin: 0 12px 12px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .status-studied {
+            background: #2e7d32;
+            color: white;
+        }
+
+        .status-not-studied {
+            background: #9e9e9e;
+            color: #1a1a1a;
+        }
+
+        .status-review {
+            background: #ff9800;
+            color: #1a1a1a;
+        }
+
+        /* Modal de detalhes */
+        .details-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.94);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.2s ease;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .details-container {
+            background: #1e1e1e;
+            width: 90%;
+            max-width: 1200px;
+            max-height: 90vh;
+            border-radius: 20px;
+            overflow-y: auto;
+            padding: 28px 28px 32px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            border: 1px solid #333;
+        }
+
+        /* Layout de 2 colunas dentro do modal */
+        .details-two-columns {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .details-two-columns {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+        }
+
+        /* Coluna do vídeo */
+        .video-column {
+            min-width: 0;
+        }
+
+        /* Coluna de comentários */
+        .comments-column {
+            background: #2a2a2a;
+            border-radius: 16px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            max-height: 600px;
+        }
+
+        .comments-header {
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e50914;
+        }
+
+        .comments-list {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            max-height: 400px;
+        }
+
+        .comment-item {
+            background: #1f1f1f;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border-left: 3px solid #e50914;
+        }
+
+        .comment-author {
+            font-weight: bold;
+            color: #e50914;
+            font-size: 0.85rem;
+            margin-bottom: 5px;
+        }
+
+        .comment-text {
+            font-size: 0.9rem;
+            color: #ddd;
+            word-wrap: break-word;
+        }
+
+        .comment-date {
+            font-size: 0.7rem;
+            color: #777;
+            margin-top: 5px;
+        }
+
+        .comment-input-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .comment-input-area input {
+            flex: 1;
+            padding: 10px;
+            border-radius: 20px;
+            border: none;
+            background: #1f1f1f;
+            color: white;
+        }
+
+        .comment-input-area input::placeholder {
+            color: #777;
+        }
+
+        .comment-input-area button {
+            background: #e50914;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .comment-input-area button:hover {
+            background: #b81d24;
+        }
+
+        .review-info {
+            background: #2a2a2a;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .review-info .review-count {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #ff9800;
+        }
+
+        .video-description {
+            background: #2a2a2a;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin: 15px 0 20px 0;
+            line-height: 1.5;
+            color: #ddd;
+            font-size: 0.95rem;
+            border-left: 4px solid #e50914;
+        }
+
+        .video-description strong {
+            color: #e50914;
+            display: block;
+            margin-bottom: 8px;
+            font-size: 1rem;
+        }
+
+        .video-embed {
+            margin: 20px 0;
+            border-radius: 16px;
+            overflow: hidden;
+            aspect-ratio: 16 / 9;
+            background: #000;
+        }
+
+        .video-embed iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .telegram-link {
+            background: #0088cc;
+            display: inline-block;
+            padding: 12px 20px;
+            border-radius: 40px;
+            text-decoration: none;
+            color: white;
+            font-weight: bold;
+            margin: 15px 15px 15px 0;
+            transition: background 0.2s;
+        }
+
+        .telegram-link:hover {
+            background: #006699;
+        }
+
+        .button-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            margin: 25px 0 15px;
+        }
+
+        .btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            background: #333;
+            color: white;
+        }
+
+        .btn-primary {
+            background: #e50914;
+        }
+
+        .btn-primary:hover {
+            background: #b81d24;
+        }
+
+        .btn-review {
+            background: #ff9800;
+        }
+
+        .btn-review:hover {
+            background: #e68900;
+        }
+
+        .btn-success {
+            background: #2e7d32;
+        }
+
+        .btn-success:hover {
+            background: #1b5e20;
+        }
+
+        .btn-secondary {
+            background: #2c2c2c;
+            border: 1px solid #555;
+        }
+
+        .btn-secondary:hover {
+            background: #444;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #777;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🇫🇷 Francês com a Marie</h1>
+    <p>Domine a pronúncia do francês com revisões espaçadas - Até 10 revisões por aula</p>
+</div>
+
+<div id="reviewsSection"></div>
+<div id="carouselsContainer"></div>
+
+<footer>
+    📚 Cada aula pode ser revisada até 10 vezes • Revisões aparecem automaticamente no topo<br>
+    🎯 Método exclusivo de pronúncia francesa • 💬 Comente e compartilhe suas dúvidas
+</footer>
+
+<script>
+    // Firebase Config
+    const firebaseConfig = {
+        apiKey: "AIzaSyCbqmIVeCzTF_mGMtR3qXE1GzAoMCT4Y2Q",
+        authDomain: "quizlet-a4fca.firebaseapp.com",
+        projectId: "quizlet-a4fca",
+        storageBucket: "quizlet-a4fca.firebasestorage.app",
+        messagingSenderId: "866614057258",
+        appId: "1:866614057258:web:0ce78a8eca0c2cac2b6653",
+        measurementId: "G-E1CSNKGKEQ"
+    };
+    
+    let db = null;
+    let useMock = true;
+
+    try {
+        if (firebase.apps.length === 0) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        db = firebase.firestore();
+        useMock = false;
+        console.log("🔥 Firebase conectado!");
+    } catch (error) {
+        console.warn("⚠️ Usando modo local", error);
+        useMock = true;
+    }
+
+    // Sistema de Revisão
+    const REVISION_INTERVALS = [1, 3, 7, 14, 30, 60, 90, 120, 150, 180];
+    const MAX_REVISIONS = 10;
+
+    let sections = [
+        {
+            id: "frances",
+            title: "🇫🇷 Curso de Pronúncia - Francês com a Marie",
+            videos: gerarVideosFrances()
+        }
+    ];
+
+    let videoProgress = new Map();
+    let currentCommentsVideoId = null;
+    let currentModal = null;
+
+    function gerarVideosFrances() {
+        const videos = [
+            {
+                id: "frances_aula1",
+                title: "1.1 - Alfabeto e Vogais",
+                description: "Aprenda o alfabeto francês e a pronúncia correta das vogais. Fundamentos essenciais para começar sua jornada no francês.",
+                youtubeId: "XB9QJcMxIiM",
+                telegramLink: "https://t.me/francescomamarie/aula1"
+            },
+            {
+                id: "frances_aula2",
+                title: "1.2 - Técnica do U",
+                description: "Domine a técnica do 'U' francês, um dos sons mais característicos e desafiadores para falantes de português.",
+                youtubeId: "E6ih92Zq8mg",
+                telegramLink: "https://t.me/francescomamarie/aula2"
+            },
+            {
+                id: "frances_aula3",
+                title: "1.3 - Segredo da Língua",
+                description: "Descubra o segredo da posição da língua para uma pronúncia autêntica do francês.",
+                youtubeId: "SEU_ID_AULA_3",
+                telegramLink: "https://t.me/francescomamarie/aula3"
+            },
+            {
+                id: "frances_aula4",
+                title: "1.4 - U vs OU",
+                description: "Diferença crucial entre os sons de 'U' e 'OU' em francês. Exercícios práticos de discriminação auditiva.",
+                youtubeId: "SEU_ID_AULA_4",
+                telegramLink: "https://t.me/francescomamarie/aula4"
+            },
+            {
+                id: "frances_aula5",
+                title: "1.5 - E mudo",
+                description: "Entenda quando o 'E' é mudo em francês e como isso afeta a fluência da fala.",
+                youtubeId: "SEU_ID_AULA_5",
+                telegramLink: "https://t.me/francescomamarie/aula5"
+            },
+            {
+                id: "frances_aula6",
+                title: "1.6 - E fechado",
+                description: "Aprenda a pronunciar o 'E' fechado (é) em diferentes contextos da língua francesa.",
+                youtubeId: "SEU_ID_AULA_6",
+                telegramLink: "https://t.me/francescomamarie/aula6"
+            },
+            {
+                id: "frances_aula7",
+                title: "1.7 - E aberto",
+                description: "Domine o 'E' aberto (è) e suas variações regionais no francês falado.",
+                youtubeId: "SEU_ID_AULA_7",
+                telegramLink: "https://t.me/francescomamarie/aula7"
+            },
+            {
+                id: "frances_aula8",
+                title: "1.8 - Acentos",
+                description: "Guia completo dos acentos franceses: aigu, grave, circonflexe, tréma e cédille.",
+                youtubeId: "SEU_ID_AULA_8",
+                telegramLink: "https://t.me/francescomamarie/aula8"
+            },
+            {
+                id: "frances_aula9",
+                title: "1.9 - Revisão",
+                description: "Revisão de todos os sons aprendidos até agora. Exercícios de fixação e avaliação.",
+                youtubeId: "SEU_ID_AULA_9",
+                telegramLink: "https://t.me/francescomamarie/aula9"
+            },
+            {
+                id: "frances_aula10",
+                title: "1.10 - Nasal A E",
+                description: "Técnica para pronunciar corretamente as vogais nasais AN, EN, EM, AM.",
+                youtubeId: "SEU_ID_AULA_10",
+                telegramLink: "https://t.me/francescomamarie/aula10"
+            },
+            {
+                id: "frances_aula11",
+                title: "1.11 - Nasal I U",
+                description: "Domine as vogais nasais IN, IM, UN, UM. Finalização do módulo de pronúncia.",
+                youtubeId: "SEU_ID_AULA_11",
+                telegramLink: "https://t.me/francescomamarie/aula11"
+            }
+        ];
+        return videos;
+    }
+
+    function initVideoProgress(videoId) {
+        if (!videoProgress.has(videoId)) {
+            videoProgress.set(videoId, {
+                status: "not_studied",
+                reviewCount: 0,
+                lastReviewDate: null,
+                nextReviewDate: null,
+                completedRevisions: []
+            });
+        }
+        return videoProgress.get(videoId);
+    }
+
+    // Funções de Comentários
+    async function carregarComentarios(videoId) {
+        if (!db) return;
+        
+        const commentsContainer = document.getElementById(`comments-list-${videoId}`);
+        if (!commentsContainer) return;
+        
+        commentsContainer.innerHTML = '<div class="loading">Carregando comentários...</div>';
+        
+        try {
+            const snapshot = await db.collection("comentarios")
+                .where("videoId", "==", videoId)
+                .orderBy("timestamp", "desc")
+                .get();
+            
+            if (snapshot.empty) {
+                commentsContainer.innerHTML = '<div class="loading">💬 Seja o primeiro a comentar!</div>';
+                return;
+            }
+            
+            commentsContainer.innerHTML = '';
+            snapshot.forEach(doc => {
+                const comentario = doc.data();
+                const commentDiv = document.createElement('div');
+                commentDiv.className = 'comment-item';
+                const data = comentario.timestamp ? new Date(comentario.timestamp.toDate()).toLocaleDateString('pt-BR') : 'Data desconhecida';
+                commentDiv.innerHTML = `
+                    <div class="comment-author">👤 ${escapeHtml(comentario.autor || 'Anônimo')}</div>
+                    <div class="comment-text">${escapeHtml(comentario.texto)}</div>
+                    <div class="comment-date">📅 ${data}</div>
+                `;
+                commentsContainer.appendChild(commentDiv);
+            });
+        } catch (error) {
+            console.error("Erro ao carregar comentários:", error);
+            commentsContainer.innerHTML = '<div class="loading">❌ Erro ao carregar comentários</div>';
+        }
+    }
+
+    async function adicionarComentario(videoId, texto, autor = "Aluno") {
+        if (!db) {
+            alert("Firebase não disponível. Comentários salvos apenas localmente.");
+            return;
+        }
+        
+        if (!texto.trim()) {
+            alert("Digite um comentário!");
+            return;
+        }
+        
+        try {
+            await db.collection("comentarios").add({
+                videoId: videoId,
+                texto: texto,
+                autor: autor,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            
+            // Recarregar comentários
+            await carregarComentarios(videoId);
+            
+            // Limpar input
+            const input = document.getElementById(`comment-input-${videoId}`);
+            if (input) input.value = '';
+            
+        } catch (error) {
+            console.error("Erro ao adicionar comentário:", error);
+            alert("Erro ao salvar comentário. Tente novamente.");
+        }
+    }
+
+    function calculateNextReviewDate(reviewCount) {
+        if (reviewCount >= MAX_REVISIONS) return null;
+        const daysToAdd = REVISION_INTERVALS[reviewCount];
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + daysToAdd);
+        return nextDate;
+    }
+
+    async function markAsStudied(videoId, isRevision = false) {
+        const progress = initVideoProgress(videoId);
+        const now = new Date();
+        
+        if (!isRevision && progress.status === "not_studied") {
+            progress.status = "studied";
+            progress.reviewCount = 0;
+            progress.lastReviewDate = now;
+            progress.nextReviewDate = calculateNextReviewDate(0);
+            progress.completedRevisions = [];
+        } else if (isRevision && progress.reviewCount < MAX_REVISIONS) {
+            progress.reviewCount++;
+            progress.lastReviewDate = now;
+            progress.completedRevisions.push(now);
+            
+            if (progress.reviewCount >= MAX_REVISIONS) {
+                progress.nextReviewDate = null;
+                progress.status = "completed";
+            } else {
+                progress.nextReviewDate = calculateNextReviewDate(progress.reviewCount);
+                progress.status = "reviewing";
+            }
+        }
+        
+        await saveProgressToFirebase();
+        renderAll();
+    }
+
+    async function markAsCompleted(videoId) {
+        const progress = initVideoProgress(videoId);
+        const now = new Date();
+        
+        progress.status = "completed";
+        progress.reviewCount = MAX_REVISIONS;
+        progress.lastReviewDate = now;
+        progress.nextReviewDate = null;
+        
+        while (progress.completedRevisions.length < MAX_REVISIONS) {
+            progress.completedRevisions.push(now);
+        }
+        
+        await saveProgressToFirebase();
+        renderAll();
+    }
+
+    function getVideosNeedingReview() {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        
+        const needReview = [];
+        
+        for (let section of sections) {
+            for (let video of section.videos) {
+                const progress = initVideoProgress(video.id);
+                
+                if (progress.nextReviewDate && progress.reviewCount < MAX_REVISIONS) {
+                    const reviewDate = new Date(progress.nextReviewDate);
+                    reviewDate.setHours(0, 0, 0, 0);
+                    
+                    if (reviewDate <= now) {
+                        needReview.push({
+                            ...video,
+                            sectionId: section.id,
+                            reviewNumber: progress.reviewCount + 1,
+                            currentReview: progress.reviewCount,
+                            nextReviewDays: REVISION_INTERVALS[progress.reviewCount]
+                        });
+                    }
+                }
+            }
+        }
+        
+        needReview.sort((a, b) => {
+            const progA = videoProgress.get(a.id);
+            const progB = videoProgress.get(b.id);
+            return new Date(progA.nextReviewDate) - new Date(progB.nextReviewDate);
+        });
+        
+        return needReview;
+    }
+
+    function renderReviewsSection() {
+        const needReview = getVideosNeedingReview();
+        const container = document.getElementById('reviewsSection');
+        
+        if (needReview.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        
+        container.innerHTML = `
+            <div class="reviews-section">
+                <div class="reviews-header">
+                    <div class="reviews-title">
+                        🔄 Revisões Pendentes - Francês com a Marie
+                    </div>
+                    <div class="reviews-badge">
+                        ${needReview.length} aula(s) para revisar
+                    </div>
+                </div>
+                <div class="reviews-carousel">
+                    ${needReview.map(video => `
+                        <div class="review-card" onclick="openVideoDetailsWithReview('${video.id}', true)">
+                            <div class="review-number">
+                                🔁 Revisão #${video.reviewNumber} / ${MAX_REVISIONS}
+                            </div>
+                            <div class="review-title">${escapeHtml(video.title)}</div>
+                            <div class="review-due">
+                                📅 Próxima revisão: ${video.nextReviewDays} dias
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderCarousels() {
+        const container = document.getElementById('carouselsContainer');
+        if (!container) return;
+        container.innerHTML = '';
+        
+        sections.forEach(section => {
+            let studied = 0;
+            
+            section.videos.forEach(video => {
+                const progress = initVideoProgress(video.id);
+                if (progress.status === "studied" || progress.status === "completed") studied++;
+            });
+            
+            const total = section.videos.length;
+            const percent = Math.round((studied / total) * 100);
+            
+            const sectionDiv = document.createElement('div');
+            sectionDiv.className = 'carousel-section';
+            sectionDiv.innerHTML = `
+                <div class="carousel-container">
+                    <div class="carousel-title">
+                        <h2>${section.title}</h2>
+                        <span class="section-progress">📊 Progresso: ${studied}/${total} (${percent}%)</span>
+                    </div>
+                    <div class="carousel-wrapper">
+                        <div class="carousel" id="carousel-${section.id}"></div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(sectionDiv);
+            
+            const carouselContainer = document.getElementById(`carousel-${section.id}`);
+            if (carouselContainer) {
+                section.videos.forEach(video => {
+                    const progress = initVideoProgress(video.id);
+                    let statusLabel = "";
+                    let statusClass = "";
+                    
+                    if (progress.status === "studied") {
+                        statusLabel = "✅ Estudado";
+                        statusClass = "status-studied";
+                    } else if (progress.status === "reviewing") {
+                        statusLabel = `🔄 Revisão ${progress.reviewCount + 1}/${MAX_REVISIONS}`;
+                        statusClass = "status-review";
+                    } else if (progress.status === "completed") {
+                        statusLabel = "🏆 Completo (10 revisões)";
+                        statusClass = "status-studied";
+                    } else {
+                        statusLabel = "📚 Não Estudado";
+                        statusClass = "status-not-studied";
+                    }
+                    
+                    const card = document.createElement('div');
+                    card.className = 'video-card';
+                    card.innerHTML = `
+                        <div class="thumbnail">
+                            <span>🎬</span>
+                            ${progress.reviewCount > 0 ? `<div class="review-counter">🔄 ${progress.reviewCount}/${MAX_REVISIONS}</div>` : ''}
+                        </div>
+                        <div class="video-title">${escapeHtml(video.title)}</div>
+                        <div class="status-badge ${statusClass}">${statusLabel}</div>
+                    `;
+                    card.addEventListener('click', () => openVideoDetails(video.id, false));
+                    carouselContainer.appendChild(card);
+                });
+            }
+        });
+        
+        document.querySelectorAll('.carousel-wrapper').forEach(wrapper => {
+            let isDown = false;
+            let startX, scrollLeft;
+            
+            wrapper.addEventListener('mousedown', (e) => {
+                isDown = true;
+                startX = e.pageX - wrapper.offsetLeft;
+                scrollLeft = wrapper.scrollLeft;
+                wrapper.style.cursor = 'grabbing';
+            });
+            wrapper.addEventListener('mouseleave', () => {
+                isDown = false;
+                wrapper.style.cursor = 'grab';
+            });
+            wrapper.addEventListener('mouseup', () => {
+                isDown = false;
+                wrapper.style.cursor = 'grab';
+            });
+            wrapper.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - wrapper.offsetLeft;
+                const walk = (x - startX) * 1.5;
+                wrapper.scrollLeft = scrollLeft - walk;
+            });
+            wrapper.style.cursor = 'grab';
+        });
+    }
+
+    window.openVideoDetailsWithReview = function(videoId, isRevision) {
+        openVideoDetails(videoId, isRevision);
+    };
+    
+    function openVideoDetails(videoId, isRevisionMode = false) {
+        let video = null;
+        for (let section of sections) {
+            const found = section.videos.find(v => v.id === videoId);
+            if (found) {
+                video = found;
+                break;
+            }
+        }
+        if (!video) return;
+        
+        const progress = initVideoProgress(video.id);
+        
+        if (currentModal) currentModal.remove();
+        
+        const embedUrl = `https://www.youtube.com/embed/${video.youtubeId}?autoplay=0&rel=0`;
+        const isReviewNeeded = isRevisionMode || (progress.nextReviewDate && new Date() >= new Date(progress.nextReviewDate));
+        
+        let statusMessage = "";
+        if (progress.status === "completed") {
+            statusMessage = "🏆 Aula completamente revisada! (10/10 revisões) - Parabéns! 🇫🇷";
+        } else if (progress.status === "studied" && progress.reviewCount === 0) {
+            statusMessage = "✅ Aula estudada. Aguardando primeira revisão em 1 dia...";
+        } else if (progress.status === "reviewing") {
+            statusMessage = `🔄 Revisão ${progress.reviewCount} de ${MAX_REVISIONS} concluída. Próxima revisão em ${REVISION_INTERVALS[progress.reviewCount]} dias.`;
+        } else if (progress.status === "not_studied") {
+            statusMessage = "📚 Aula ainda não estudada. Comece agora sua jornada no francês!";
+        }
+        
+        const modal = document.createElement('div');
+        modal.className = 'details-overlay';
+        modal.innerHTML = `
+            <div class="details-container">
+                <div class="details-two-columns">
+                    <!-- Coluna da Esquerda: Vídeo e Informações -->
+                    <div class="video-column">
+                        <h2>🇫🇷 ${escapeHtml(video.title)}</h2>
+                        
+                        ${progress.reviewCount > 0 || progress.status === "completed" ? `
+                            <div class="review-info">
+                                <div class="review-count">🔄 Revisões: ${progress.reviewCount} / ${MAX_REVISIONS}</div>
+                                <div>${statusMessage}</div>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="video-description">
+                            <strong>📝 Sobre esta aula:</strong>
+                            ${escapeHtml(video.description)}
+                        </div>
+                        <div class="video-embed">
+                            <iframe src="${embedUrl}" allowfullscreen loading="lazy"></iframe>
+                        </div>
+                        <div>
+                            <a href="${video.telegramLink}" target="_blank" class="telegram-link">📱 Grupo no Telegram - Francês com a Marie</a>
+                        </div>
+                        <div class="button-group">
+                            <button class="btn btn-secondary" id="backBtn">⬅ Voltar ao Carrossel</button>
+                            
+                            ${progress.status === "completed" ? 
+                                `<button class="btn btn-success" disabled>🏆 Completo (10 revisões)</button>` :
+                                (progress.status === "not_studied" ? 
+                                    `<button class="btn btn-primary" id="studyBtn">📌 Marcar como Estudado</button>` : 
+                                    (isReviewNeeded && progress.reviewCount < MAX_REVISIONS ? 
+                                        `<button class="btn btn-review" id="reviewBtn">🔄 Concluir Revisão #${progress.reviewCount + 1}</button>` : 
+                                        (progress.reviewCount < MAX_REVISIONS ?
+                                            `<button class="btn btn-primary" id="reviewBtn">📖 Revisar Antecipadamente</button>` :
+                                            ``
+                                        )
+                                    )
+                                )
+                            }
+                            
+                            ${progress.status !== "completed" ? 
+                                `<button class="btn btn-success" id="completeBtn">🏁 Marcar como Concluído (Todas revisões)</button>` : 
+                                ``
+                            }
+                        </div>
+                    </div>
+                    
+                    <!-- Coluna da Direita: Comentários -->
+                    <div class="comments-column">
+                        <div class="comments-header">
+                            <h3>💬 Comentários sobre esta aula</h3>
+                        </div>
+                        <div class="comments-list" id="comments-list-${video.id}">
+                            <div class="loading">Carregando comentários...</div>
+                        </div>
+                        <div class="comment-input-area">
+                            <input type="text" id="comment-input-${video.id}" placeholder="Escreva seu comentário ou dúvida..." maxlength="500">
+                            <button id="comment-btn-${video.id}">Enviar ➤</button>
+                        </div>
+                        <div class="comment-date" style="font-size: 0.7rem; margin-top: 8px; text-align: center;">
+                            💡 Compartilhe suas dúvidas e aprendizados!
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        currentModal = modal;
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) modal.remove();
+        });
+        
+        document.getElementById('backBtn').addEventListener('click', () => modal.remove());
+        
+        const studyBtn = document.getElementById('studyBtn');
+        const reviewBtn = document.getElementById('reviewBtn');
+        const completeBtn = document.getElementById('completeBtn');
+        
+        if (studyBtn) {
+            studyBtn.addEventListener('click', async () => {
+                await markAsStudied(video.id, false);
+                modal.remove();
+            });
+        }
+        
+        if (reviewBtn) {
+            reviewBtn.addEventListener('click', async () => {
+                await markAsStudied(video.id, true);
+                modal.remove();
+            });
+        }
+        
+        if (completeBtn) {
+            completeBtn.addEventListener('click', async () => {
+                if (confirm(`Tem certeza que deseja marcar "${video.title}" como completamente concluído?\n\nIsso irá marcar todas as ${MAX_REVISIONS} revisões como concluídas.`)) {
+                    await markAsCompleted(video.id);
+                    modal.remove();
+                }
+            });
+        }
+        
+        // Carregar comentários
+        carregarComentarios(video.id);
+        
+        // Adicionar evento de enviar comentário
+        const commentInput = document.getElementById(`comment-input-${video.id}`);
+        const commentBtn = document.getElementById(`comment-btn-${video.id}`);
+        
+        if (commentBtn && commentInput) {
+            commentBtn.addEventListener('click', async () => {
+                const texto = commentInput.value.trim();
+                if (texto) {
+                    await adicionarComentario(video.id, texto, "Aluno");
+                    commentInput.value = '';
+                } else {
+                    alert("Digite um comentário antes de enviar!");
+                }
+            });
+            
+            commentInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    commentBtn.click();
+                }
+            });
+        }
+    }
+    
+    async function saveProgressToFirebase() {
+        const data = {};
+        for (let [id, progress] of videoProgress.entries()) {
+            data[id] = progress;
+        }
+        
+        if (!useMock && db) {
+            try {
+                await db.collection("videoReviews").doc("progress").set(data, { merge: true });
+            } catch (err) {
+                console.warn("Erro ao salvar:", err);
+                localStorage.setItem("reviews_progress_mock", JSON.stringify(data));
+            }
+        } else {
+            localStorage.setItem("reviews_progress_mock", JSON.stringify(data));
+        }
+    }
+    
+    async function loadProgress() {
+        if (!useMock && db) {
+            try {
+                const doc = await db.collection("videoReviews").doc("progress").get();
+                if (doc.exists) {
+                    const data = doc.data();
+                    for (let [id, prog] of Object.entries(data)) {
+                        if (prog.lastReviewDate) prog.lastReviewDate = new Date(prog.lastReviewDate);
+                        if (prog.nextReviewDate) prog.nextReviewDate = new Date(prog.nextReviewDate);
+                        if (prog.completedRevisions) {
+                            prog.completedRevisions = prog.completedRevisions.map(d => new Date(d));
+                        }
+                        videoProgress.set(id, prog);
+                    }
+                }
+            } catch (err) {
+                console.warn("Erro ao carregar:", err);
+                loadLocalMock();
+            }
+        } else {
+            loadLocalMock();
+        }
+        
+        for (let section of sections) {
+            for (let video of section.videos) {
+                initVideoProgress(video.id);
+            }
+        }
+        
+        renderAll();
+    }
+    
+    function loadLocalMock() {
+        const saved = localStorage.getItem("reviews_progress_mock");
+        if (saved) {
+            const data = JSON.parse(saved);
+            for (let [id, prog] of Object.entries(data)) {
+                if (prog.lastReviewDate) prog.lastReviewDate = new Date(prog.lastReviewDate);
+                if (prog.nextReviewDate) prog.nextReviewDate = new Date(prog.nextReviewDate);
+                videoProgress.set(id, prog);
+            }
+        }
+    }
+    
+    function renderAll() {
+        renderReviewsSection();
+        renderCarousels();
+    }
+    
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if(m === '&') return '&amp;';
+            if(m === '<') return '&lt;';
+            if(m === '>') return '&gt;';
+            return m;
+        });
+    }
+    
+    function subscribeRealtime() {
+        if (!useMock && db) {
+            db.collection("videoReviews").doc("progress").onSnapshot((doc) => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    for (let [id, prog] of Object.entries(data)) {
+                        if (prog.lastReviewDate) prog.lastReviewDate = new Date(prog.lastReviewDate);
+                        if (prog.nextReviewDate) prog.nextReviewDate = new Date(prog.nextReviewDate);
+                        videoProgress.set(id, prog);
+                    }
+                    renderAll();
+                }
+            });
+        }
+    }
+    
+    loadProgress().then(() => {
+        subscribeRealtime();
+    });
+</script>
+</body>
+</html>
